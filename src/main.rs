@@ -4,11 +4,13 @@ use std::process::{Command, Stdio};
 
 use serenity::{
     async_trait,
-    client::bridge::gateway::GatewayIntents,
+    //client::bridge::gateway::GatewayIntents,
     model::{channel::Message, gateway::Ready},
     prelude::*,
     utils::MessageBuilder,
 };
+
+use serenity_ctrlc::Ext;
 
 use serde::{Deserialize, Serialize};
 
@@ -21,16 +23,20 @@ async fn main() {
     let config: Config = serde_json::from_str(&config).expect("Failed to parse config.json");
 
     // Initialize client
-    let mut client = Client::builder(&config.token)
+    let client = Client::builder(&config.token, GatewayIntents::all())
         .event_handler(Handler)
-        .intents(GatewayIntents::all())
         .await
         .expect("Error creating client");
 
     // Add the command that we use to check the code to the client's data
     client.data.write().await.insert::<CmdKey>(config.cmd);
 
-    client.start().await.expect("Error starting client");
+    client
+        .ctrlc()
+        .expect("Error initializing Ctrl+C handler")
+        .start()
+        .await
+        .expect("Error starting client");
 }
 
 /// Helper macro that handles a Result by printing an error message and returning
